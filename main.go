@@ -9,6 +9,54 @@ import (
 	"strings"
 )
 
+type JevRequest struct {
+	Model     string       `json:"model"`
+	State     string       `json:"state"`
+	Questions JevQuestions `json:"questions"`
+}
+
+type JevQuestions struct {
+	WorthCapturing NoulQuestion   `json:"worth_capturing"`
+	Kind           ChoiceQuestion `json:"kind"`
+}
+
+type NoulQuestion struct {
+	Type         string `json:"type"`
+	Instructions string `json:"instructions"`
+}
+
+type ChoiceQuestion struct {
+	Type         string            `json:"type"`
+	Instructions string            `json:"instructions"`
+	Criteria     map[string]string `json:"criteria"`
+}
+
+func buildJevRequest(text string) JevRequest {
+	return JevRequest{
+		Model: "jev-latest",
+		State: text,
+		Questions: JevQuestions{
+			WorthCapturing: NoulQuestion{
+				Type:         "noul",
+				Instructions: "Is this worth capturing in today's Daily Note?",
+			},
+			Kind: ChoiceQuestion{
+				Type:         "choice",
+				Instructions: "What kind of Daily Note entry is this?",
+				Criteria: map[string]string{
+					"self_observation": "An observation about the writer's own behavior or thinking",
+					"idea":             "An idea or possibility worth remembering",
+					"learning":         "Something the writer learned or understood",
+					"question":         "An unresolved question worth revisiting",
+					"memory":           "Something worth remembering about this day",
+					"event":            "Something that happened",
+					"other":            "None of the above fits well",
+				},
+			},
+		},
+	}
+}
+
 type JevResponse struct {
 	Model   string     `json:"model"`
 	Answers JevAnswers `json:"answers"`
@@ -110,6 +158,15 @@ func main() {
 	}
 
 	text := strings.Join(os.Args[1:], " ")
+
+	request := buildJevRequest(text)
+
+	data, err := json.MarshalIndent(request, "", "  ")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(string(data))
 
 	response, err := getJevResponse(text)
 	if err != nil {
