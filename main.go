@@ -1,8 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -45,17 +48,44 @@ type Judgement struct {
 	Kinds      []KindScore
 }
 
-func judge(text string) Judgement {
-	return Judgement{
-		Write:      true,
-		WriteScore: 0.87,
-		Kinds: []KindScore{
-			{Kind: "self_observation", Score: 0.61},
-			{Kind: "idea", Score: 0.24},
-			{Kind: "learning", Score: 0.10},
-			{Kind: "question", Score: 0.05},
-		},
+func getJevResponse(text string) (JevResponse, error) {
+	data, err := os.ReadFile("testdata/sample_response.json")
+	if err != nil {
+		return JevResponse{}, err
 	}
+
+	var response JevResponse
+	if err := json.Unmarshal(data, &response); err != nil {
+		return JevResponse{}, err
+	}
+
+	return response, nil
+}
+
+func interpret(response JevResponse) Judgement {
+	writeScore := response.Answers.WorthCapturing.Noul
+	write := writeScore > 0.7
+
+	kinds := sortKinds(response.Answers.Kind.Probabilities)
+
+	return Judgement{
+		Write:      write,
+		WriteScore: writeScore,
+		Kinds:      kinds,
+	}
+}
+
+func sortKinds(probabilities map[string]float64) []KindScore {
+	kinds := make([]KindScore, 0, len(probabilities))
+	for kind, score := range probabilities {
+		kinds = append(kinds, KindScore{Kind: kind, Score: score})
+	}
+
+	sort.Slice(kinds, func(i, j int) bool {
+		return kinds[i].Score > kinds[j].Score
+	})
+
+	return kinds
 }
 
 func printJudgement(j Judgement) {
@@ -78,7 +108,12 @@ func main() {
 
 	text := strings.Join(os.Args[1:], " ")
 
-	result := judge(text)
+	response, err := getJevResponse(text)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	result := interpret(response)
 
 	printJudgement(result)
 }

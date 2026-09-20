@@ -1,0 +1,27 @@
+{
+  "model": "jev-latest",
+  "answers": {
+    "worth_capturing": {
+      "type": "noul",
+      "noul": 0.87
+    },
+    "kind": {
+      "type": "choice",
+      "choice": "self_observation",
+      "probabilities": {
+        "self_observation": 0.61,
+        "idea": 0.24,
+        "learning": 0.10,
+        "question": 0.03,
+        "memory": 0.01,
+        "event": 0.00,
+        "other": 0.01
+      },
+      "confidence": 0.58
+    }
+  },
+  "usage": {
+    "input_tokens": 312,
+    "output_tokens": 48
+  }
+}
