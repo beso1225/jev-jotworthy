@@ -41,20 +41,31 @@ func buildJevRequest(text string) JevRequest {
 		State: text,
 		Questions: JevQuestions{
 			WorthCapturing: NoulQuestion{
-				Type:         "noul",
-				Instructions: "Is this worth capturing in today's Daily Note?",
+				Type: "noul",
+				Instructions: `Decide whether the user should jot this down in their personal Obsidian vault.
+
+The vault is a low-friction personal knowledge base. Small technical facts,
+tool behavior, shortcuts, debugging observations, project-specific decisions,
+questions, ideas, and subjective impressions can all be worth capturing.
+
+Do not require the note to be broadly important, novel, polished, or useful
+to other people. A small detail is worth capturing if the user may reasonably
+want to remember, revisit, connect, or search for it later.
+
+The cost of keeping a low-value note is small. The cost of losing a useful
+thought is higher. When uncertain, prefer capturing.`,
 			},
 			Kind: ChoiceQuestion{
 				Type:         "choice",
-				Instructions: "What kind of Daily Note entry is this?",
+				Instructions: "What kind of Obsidian Daily Note entry is this?",
 				Criteria: map[string]string{
-					"self_observation": "An observation about the writer's own behavior or thinking",
-					"idea":             "An idea or possibility worth remembering",
-					"learning":         "Something the writer learned or understood",
-					"question":         "An unresolved question worth revisiting",
-					"memory":           "Something worth remembering about this day",
-					"event":            "Something that happened",
-					"other":            "None of the above fits well",
+					"learning":         "Something the writer learned, understood, or wants to remember.",
+					"idea":             "An idea, hypothesis, possibility, or thought worth developing.",
+					"question":         "An unresolved question worth revisiting or investigating.",
+					"self_observation": "An observation about the writer's own thinking, behavior, habits, or preferences.",
+					"decision":         "A decision, conclusion, or choice whose reasoning may be useful later.",
+					"reference":        "Information that may be useful to look up or refer back to later.",
+					"other":            "Worth capturing, but none of the other categories fit well.",
 				},
 			},
 		},
@@ -170,7 +181,7 @@ func getJevResponse(text string) (JevResponse, error) {
 
 func interpret(response JevResponse) Judgement {
 	writeScore := response.Answers.WorthCapturing.Noul
-	write := writeScore > 0.7
+	write := writeScore >= 0.6
 
 	kinds := sortKinds(response.Answers.Kind.Probabilities)
 
