@@ -82,6 +82,9 @@ func sortKinds(probabilities map[string]float64) []KindScore {
 	}
 
 	sort.Slice(kinds, func(i, j int) bool {
+		if kinds[i].Score == kinds[j].Score {
+			return kinds[i].Kind < kinds[j].Kind
+		}
 		return kinds[i].Score > kinds[j].Score
 	})
 
