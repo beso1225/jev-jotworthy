@@ -1,3 +1,3 @@
 module github.com/beso1225/jev-jotworthy
 
-go 1.26.7
+go 1.26.2
