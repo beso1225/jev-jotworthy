@@ -204,7 +204,16 @@ function M.submit()
 
   local bufnr = state.bufnr
   local command = M.build_command(config)
-  vim.system(command, { stdin = text, text = true }, function(obj)
+  if not command[1]:find("/", 1, true) then
+    local executable = vim.fn.exepath(command[1])
+    if executable == "" then
+      result_error("command not found: " .. command[1] .. ". Run `pkf run switch` and restart Neovim.")
+      return
+    end
+    command[1] = executable
+  end
+
+  local ok, process = pcall(vim.system, command, { stdin = text, text = true }, function(obj)
     vim.schedule(function()
       if state.bufnr ~= bufnr then
         return
@@ -227,6 +236,9 @@ function M.submit()
       show_result(result)
     end)
   end)
+  if not ok then
+    result_error("could not start backend: " .. tostring(process))
+  end
 end
 
 function M.open(text)
