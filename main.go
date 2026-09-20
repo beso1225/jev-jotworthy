@@ -6,6 +6,34 @@ import (
 	"strings"
 )
 
+type JevResponse struct {
+	Model   string     `json:"model"`
+	Answers JevAnswers `json:"answers"`
+	Usage   JevUsage   `json:"usage"`
+}
+
+type JevAnswers struct {
+	WorthCapturing NoulAnswer   `json:"worth_capturing"`
+	Kind           ChoiceAnswer `json:"kind"`
+}
+
+type NoulAnswer struct {
+	Type string  `json:"type"`
+	Noul float64 `json:"noul"`
+}
+
+type ChoiceAnswer struct {
+	Type          string             `json:"type"`
+	Choice        string             `json:"choice"`
+	Probabilities map[string]float64 `json:"probabilities"`
+	Confidence    float64            `json:"confidence"`
+}
+
+type JevUsage struct {
+	InputTokens  int `json:"input_tokens"`
+	OutputTokens int `json:"output_tokens"`
+}
+
 type KindScore struct {
 	Kind  string
 	Score float64
