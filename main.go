@@ -75,6 +75,8 @@ thought is higher. When uncertain, prefer capturing.`,
 
 const jevEndpoint = "https://api.typesafe.ai/v1/systemone"
 
+const defaultThreshold = 0.6
+
 func sendJevRequest(request JevRequest) (JevResponse, error) {
 	apiKey := os.Getenv("JEV_API_KEY")
 	if apiKey == "" {
@@ -169,6 +171,7 @@ type Judgement struct {
 type cliOptions struct {
 	jsonOutput bool
 	stdin      bool
+	threshold  float64
 }
 
 func parseCLIArgs(args []string) (cliOptions, []string, error) {
@@ -177,13 +180,18 @@ func parseCLIArgs(args []string) (cliOptions, []string, error) {
 
 	jsonOutput := flags.Bool("json", false, "print the judgement as JSON")
 	stdin := flags.Bool("stdin", false, "read the text from stdin")
+	threshold := flags.Float64("threshold", defaultThreshold, "minimum score required to write the note (0-1)")
 	if err := flags.Parse(args); err != nil {
 		return cliOptions{}, nil, err
+	}
+	if *threshold < 0 || *threshold > 1 {
+		return cliOptions{}, nil, fmt.Errorf("threshold must be between 0 and 1: %f", *threshold)
 	}
 
 	return cliOptions{
 		jsonOutput: *jsonOutput,
 		stdin:      *stdin,
+		threshold:  *threshold,
 	}, flags.Args(), nil
 }
 
@@ -202,8 +210,12 @@ func getJevResponse(text string) (JevResponse, error) {
 }
 
 func interpret(response JevResponse) Judgement {
+	return interpretWithThreshold(response, defaultThreshold)
+}
+
+func interpretWithThreshold(response JevResponse, threshold float64) Judgement {
 	writeScore := response.Answers.WorthCapturing.Noul
-	write := writeScore >= 0.6
+	write := writeScore >= threshold
 
 	kinds := sortKinds(response.Answers.Kind.Probabilities)
 
@@ -270,7 +282,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	result := interpret(response)
+	result := interpretWithThreshold(response, options.threshold)
 
 	if options.jsonOutput {
 		if err := json.NewEncoder(os.Stdout).Encode(result); err != nil {

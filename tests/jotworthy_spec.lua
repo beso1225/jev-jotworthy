@@ -9,10 +9,13 @@ end
 local command = jotworthy.build_command({
   command = "jotworthy",
   command_args = { "--json", "--stdin" },
+  threshold = 0.75,
 })
 assert_equal(command[1], "jotworthy", "command executable")
 assert_equal(command[2], "--json", "first command argument")
 assert_equal(command[3], "--stdin", "second command argument")
+assert_equal(command[4], "--threshold", "threshold flag")
+assert_equal(command[5], "0.75", "threshold value")
 
 local lines = jotworthy.format_result({
   write = true,

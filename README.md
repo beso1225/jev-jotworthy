@@ -12,10 +12,12 @@ Set `JEV_API_KEY` and run the CLI with a text argument:
 jotworthy "I learned that ..."
 ```
 
-The Neovim plugin uses the machine-readable form over stdin:
+The Neovim plugin uses the machine-readable form over stdin. The default
+threshold is `0.60`; pass `--threshold` to override it:
 
 ```sh
 printf '%s' "I learned that ..." | jotworthy --json --stdin
+printf '%s' "I learned that ..." | jotworthy --json --stdin --threshold 0.75
 ```
 
 ## Neovim plugin
@@ -26,6 +28,7 @@ configure the executable path if `jotworthy` is not on `$PATH`:
 ```lua
 require("jotworthy").setup({
   command = "/absolute/path/to/jotworthy",
+  threshold = 0.75,
   -- Optional. The plugin also detects both command styles automatically:
   -- today_command = "ObsidianToday",
 })

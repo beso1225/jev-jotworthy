@@ -20,6 +20,30 @@ func TestParseCLIArgs(t *testing.T) {
 	if len(args) != 0 {
 		t.Fatalf("args = %#v, want no positional arguments", args)
 	}
+	if options.threshold != defaultThreshold {
+		t.Errorf("threshold = %f, want %f", options.threshold, defaultThreshold)
+	}
+}
+
+func TestParseCLIArgsThreshold(t *testing.T) {
+	options, _, err := parseCLIArgs([]string{"--threshold", "0.85"})
+	if err != nil {
+		t.Fatalf("parseCLIArgs returned an error: %v", err)
+	}
+
+	if options.threshold != 0.85 {
+		t.Errorf("threshold = %f, want 0.85", options.threshold)
+	}
+}
+
+func TestParseCLIArgsRejectsInvalidThreshold(t *testing.T) {
+	for _, value := range []string{"-0.01", "1.01"} {
+		t.Run(value, func(t *testing.T) {
+			if _, _, err := parseCLIArgs([]string{"--threshold", value}); err == nil {
+				t.Fatalf("parseCLIArgs(%q) returned nil error, want an error", value)
+			}
+		})
+	}
 }
 
 func TestJudgementJSON(t *testing.T) {
@@ -147,5 +171,21 @@ func TestInterpretThreshold(t *testing.T) {
 				)
 			}
 		})
+	}
+}
+
+func TestInterpretWithThreshold(t *testing.T) {
+	response := JevResponse{
+		Answers: JevAnswers{
+			WorthCapturing: NoulAnswer{Noul: 0.65},
+			Kind:           ChoiceAnswer{Probabilities: map[string]float64{}},
+		},
+	}
+
+	if got := interpretWithThreshold(response, 0.60).Write; !got {
+		t.Error("threshold 0.60: Write = false, want true")
+	}
+	if got := interpretWithThreshold(response, 0.70).Write; got {
+		t.Error("threshold 0.70: Write = true, want false")
 	}
 }

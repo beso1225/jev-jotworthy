@@ -3,6 +3,7 @@ local M = {}
 local defaults = {
   command = "jotworthy",
   command_args = { "--json", "--stdin" },
+  threshold = 0.6,
   border = "rounded",
   width = 0.72,
   height = 0.62,
@@ -119,8 +120,16 @@ end
 
 function M.build_command(opts)
   local command = { opts.command }
+  local has_threshold = false
   for _, arg in ipairs(opts.command_args or {}) do
     table.insert(command, arg)
+    if arg == "--threshold" then
+      has_threshold = true
+    end
+  end
+  if opts.threshold ~= nil and not has_threshold then
+    table.insert(command, "--threshold")
+    table.insert(command, string.format("%.17g", opts.threshold))
   end
   return command
 end
@@ -237,7 +246,11 @@ function M.open(text)
 end
 
 function M.setup(opts)
-  config = vim.tbl_deep_extend("force", vim.deepcopy(defaults), opts or {})
+  opts = opts or {}
+  if opts.threshold ~= nil and (type(opts.threshold) ~= "number" or opts.threshold < 0 or opts.threshold > 1) then
+    error("jotworthy threshold must be a number between 0 and 1")
+  end
+  config = vim.tbl_deep_extend("force", vim.deepcopy(defaults), opts)
 end
 
 return M
