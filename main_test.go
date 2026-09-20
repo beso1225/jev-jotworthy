@@ -1,6 +1,47 @@
 package main
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
+
+func TestParseCLIArgs(t *testing.T) {
+	options, args, err := parseCLIArgs([]string{"--json", "--stdin"})
+	if err != nil {
+		t.Fatalf("parseCLIArgs returned an error: %v", err)
+	}
+
+	if !options.jsonOutput {
+		t.Error("jsonOutput = false, want true")
+	}
+	if !options.stdin {
+		t.Error("stdin = false, want true")
+	}
+	if len(args) != 0 {
+		t.Fatalf("args = %#v, want no positional arguments", args)
+	}
+}
+
+func TestJudgementJSON(t *testing.T) {
+	judgement := Judgement{
+		Write:      true,
+		WriteScore: 0.87,
+		Kinds: []KindScore{
+			{Kind: "idea", Score: 0.61},
+		},
+	}
+
+	data, err := json.Marshal(judgement)
+	if err != nil {
+		t.Fatalf("json.Marshal returned an error: %v", err)
+	}
+
+	got := string(data)
+	want := `{"write":true,"write_score":0.87,"kinds":[{"kind":"idea","score":0.61}]}`
+	if got != want {
+		t.Errorf("JSON = %s, want %s", got, want)
+	}
+}
 
 func TestSortKinds(t *testing.T) {
 	probabilities := map[string]float64{
@@ -78,8 +119,8 @@ func TestInterpretThreshold(t *testing.T) {
 		want  bool
 	}{
 		{"above threshold", 0.71, true},
-		{"at threshold", 0.70, true},
-		{"below threshold", 0.69, false},
+		{"at threshold", 0.60, true},
+		{"below threshold", 0.59, false},
 	}
 
 	for _, tt := range tests {

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -155,14 +156,35 @@ type JevUsage struct {
 }
 
 type KindScore struct {
-	Kind  string
-	Score float64
+	Kind  string  `json:"kind"`
+	Score float64 `json:"score"`
 }
 
 type Judgement struct {
-	Write      bool
-	WriteScore float64
-	Kinds      []KindScore
+	Write      bool        `json:"write"`
+	WriteScore float64     `json:"write_score"`
+	Kinds      []KindScore `json:"kinds"`
+}
+
+type cliOptions struct {
+	jsonOutput bool
+	stdin      bool
+}
+
+func parseCLIArgs(args []string) (cliOptions, []string, error) {
+	flags := flag.NewFlagSet("jotworthy", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+
+	jsonOutput := flags.Bool("json", false, "print the judgement as JSON")
+	stdin := flags.Bool("stdin", false, "read the text from stdin")
+	if err := flags.Parse(args); err != nil {
+		return cliOptions{}, nil, err
+	}
+
+	return cliOptions{
+		jsonOutput: *jsonOutput,
+		stdin:      *stdin,
+	}, flags.Args(), nil
 }
 
 func getJevResponse(text string) (JevResponse, error) {
@@ -221,12 +243,25 @@ func printJudgement(j Judgement) {
 }
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Fprintln(os.Stderr, "usage: jotworthy <text>")
+	options, args, err := parseCLIArgs(os.Args[1:])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(2)
 	}
 
-	text := strings.Join(os.Args[1:], " ")
+	var text string
+	if options.stdin {
+		input, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			log.Fatal(err)
+		}
+		text = strings.TrimSpace(string(input))
+	} else if len(args) > 0 {
+		text = strings.Join(args, " ")
+	} else {
+		fmt.Fprintln(os.Stderr, "usage: jotworthy <text>")
+		os.Exit(2)
+	}
 
 	request := buildJevRequest(text)
 
@@ -236,6 +271,13 @@ func main() {
 	}
 
 	result := interpret(response)
+
+	if options.jsonOutput {
+		if err := json.NewEncoder(os.Stdout).Encode(result); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 
 	printJudgement(result)
 }
