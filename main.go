@@ -1,12 +1,16 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"sort"
 	"strings"
+	"time"
 )
 
 type JevRequest struct {
@@ -55,6 +59,60 @@ func buildJevRequest(text string) JevRequest {
 			},
 		},
 	}
+}
+
+const jevEndpoint = "https://api.typesafe.ai/v1/systemone"
+
+func sendJevRequest(request JevRequest) (JevResponse, error) {
+	apiKey := os.Getenv("JEV_API_KEY")
+	if apiKey == "" {
+		return JevResponse{}, fmt.Errorf("JEV_API_KEY not set")
+	}
+
+	body, err := json.Marshal(request)
+	if err != nil {
+		return JevResponse{}, err
+	}
+
+	httpRequest, err := http.NewRequest(
+		http.MethodPost,
+		jevEndpoint,
+		bytes.NewReader(body),
+	)
+	if err != nil {
+		return JevResponse{}, err
+	}
+
+	httpRequest.Header.Set("Authorization", "Bearer "+apiKey)
+	httpRequest.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	resp, err := client.Do(httpRequest)
+	if err != nil {
+		return JevResponse{}, err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
+		return JevResponse{}, fmt.Errorf(
+			"Jev API returned %s: %s",
+			resp.Status,
+			string(body),
+		)
+	}
+
+	var response JevResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		return JevResponse{}, err
+	}
+
+	return response, nil
+
 }
 
 type JevResponse struct {
@@ -161,14 +219,7 @@ func main() {
 
 	request := buildJevRequest(text)
 
-	data, err := json.MarshalIndent(request, "", "  ")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(string(data))
-
-	response, err := getJevResponse(text)
+	response, err := sendJevRequest(request)
 	if err != nil {
 		log.Fatal(err)
 	}
